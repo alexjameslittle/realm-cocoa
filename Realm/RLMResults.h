@@ -322,6 +322,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// :nodoc:
 - (RLMObjectType)objectAtIndexedSubscript:(NSUInteger)index;
 
+#pragma mark - Freeze
+
+@property (nonatomic, readonly, getter=isFrozen) BOOL frozen;
+- (instancetype)freeze;
+
 #pragma mark - Unavailable Methods
 
 /**

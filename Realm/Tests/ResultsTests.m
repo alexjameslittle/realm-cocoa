@@ -1120,4 +1120,83 @@ static vm_size_t get_resident_size() {
     XCTAssertThrows([[AggregateArrayObject allObjects] distinctResultsUsingKeyPaths:@[@"array"]]);
 }
 
+#pragma mark - Frozen Results
+
+static RLMResults<IntObject *> *testResults() {
+    RLMRealm *realm = [RLMRealm defaultRealm];
+    [realm transactionWithBlock:^{
+        [IntObject createInDefaultRealmWithValue:@[@0]];
+        [IntObject createInDefaultRealmWithValue:@[@1]];
+        [IntObject createInDefaultRealmWithValue:@[@2]];
+    }];
+
+    return [IntObject allObjects];
+}
+
+- (void)testIsFrozen {
+    RLMResults *unfrozen = testResults();
+    RLMResults *frozen = [unfrozen freeze];
+    XCTAssertFalse(unfrozen.isFrozen);
+    XCTAssertFalse(frozen.isFrozen);
+}
+
+- (void)testFreezingFrozenObjectReturnsSelf {
+    RLMResults *results = testResults();
+    RLMResults *frozen = [results freeze];
+    XCTAssertNotEqual(results, frozen);
+    XCTAssertNotEqual(results.freeze, frozen);
+    XCTAssertEqual(frozen, frozen.freeze);
+}
+
+- (void)testFreezeFromWrongThread {
+    RLMResults *results = testResults();
+    [self dispatchAsyncAndWait:^{
+        RLMAssertThrowsWithReason([results freeze],
+                                  @"Realm accessed from incorrect thread");
+    }];
+}
+
+- (void)testAccessFrozenResultsFromDifferentThread {
+    RLMResults *frozen = [testResults() freeze];
+    [self dispatchAsyncAndWait:^{
+        XCTAssertEqualObjects([frozen valueForKey:@"intCol"], (@[@0, @1, @2]));
+    }];
+}
+
+- (void)testObserveFrozenResults {
+    RLMResults *frozen = [testResults() freeze];
+    id block = ^(__unused BOOL deleted, __unused NSArray *changes, __unused NSError *error) {};
+    RLMAssertThrowsWithReason([frozen addNotificationBlock:block],
+                              @"Frozen Realms do not change and do not have change notifications.");
+}
+
+- (void)testQueryFrozenResults {
+    RLMResults *frozen = [testResults() freeze];
+    XCTAssertEqualObjects([[frozen objectsWhere:@"intCol > 0"] valueForKey:@"intCol"], (@[@1, @2]));
+}
+
+#if 0
+- (void)testFrozenObjectEquality {
+    IntObject *liveObj = [[IntObject alloc] init];
+    RLMRealm *realm = RLMRealm.defaultRealm;
+    [realm transactionWithBlock:^{
+        [realm addObject:liveObj];
+    }];
+
+    IntObject *frozen1 = [liveObj freeze];
+    [realm transactionWithBlock:^{
+        [StringObject createInRealm:realm withValue:@[@"a"]];
+    }];
+    IntObject *frozen2 = [liveObj freeze];
+    [realm transactionWithBlock:^{
+        liveObj.intCol = 2;
+    }];
+    IntObject *frozen3 = [liveObj freeze];
+
+    XCTAssertEqualObjects(frozen1, frozen2);
+    XCTAssertNotEqualObjects(frozen1, frozen3);
+    XCTAssertNotEqualObjects(frozen2, frozen3);
+}
+#endif
+
 @end

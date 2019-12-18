@@ -358,6 +358,7 @@ NS_ASSUME_NONNULL_BEGIN
  if `invalidate` is called on that Realm.
  */
 @property (nonatomic, readonly, getter = isInvalidated) BOOL invalidated;
+@property (nonatomic, readonly, getter = isFrozen) BOOL frozen;
 
 
 #pragma mark - Customizing your Objects
@@ -592,6 +593,8 @@ typedef void (^RLMObjectChangeBlock)(BOOL deleted,
  @return    Whether the object represents the same object as the receiver.
  */
 - (BOOL)isEqualToObject:(RLMObject *)object;
+
+- (instancetype)freeze NS_RETURNS_RETAINED;
 
 #pragma mark - Dynamic Accessors
 

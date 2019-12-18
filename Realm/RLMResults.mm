@@ -49,6 +49,10 @@ using namespace realm;
 @interface RLMResults () <RLMThreadConfined_Private>
 @end
 
+@interface RLMLockedResults : NSProxy
+- (id)initWithResults:(RLMResults *)results;
+@end
+
 //
 // RLMResults implementation
 //
@@ -131,7 +135,11 @@ void RLMThrowResultsError(NSString *aggregateMethod) {
 }
 
 - (instancetype)subresultsWithResults:(realm::Results)results {
-    return [self.class resultsWithObjectInfo:*_info results:std::move(results)];
+    RLMResults *subresults = [self.class resultsWithObjectInfo:*_info results:std::move(results)];
+    if (subresults.frozen) {
+        return (id)[[RLMLockedResults alloc] initWithResults:subresults];
+    }
+    return subresults;
 }
 
 static inline void RLMResultsValidateInWriteTransaction(__unsafe_unretained RLMResults *const ar) {
@@ -493,6 +501,22 @@ static inline void RLMResultsValidateInWriteTransaction(__unsafe_unretained RLMR
     });
 }
 
+- (instancetype)freeze {
+    if (self.frozen) {
+        return self;
+    }
+
+    RLMRealm *frozenRealm = [_realm freeze];
+    return translateRLMResultsErrors([&] {
+        RLMResults *frozen = [self.class resultsWithObjectInfo:_info->freeze(frozenRealm)
+                                                       results:_results.freeze(frozenRealm->_realm)];
+        return (id)[[RLMLockedResults alloc] initWithResults:frozen];
+    });
+}
+
+- (BOOL)isFrozen {
+    return _realm.frozen;
+}
 
 // The compiler complains about the method's argument type not matching due to
 // it not having the generic type attached, but it doesn't seem to be possible
@@ -539,3 +563,38 @@ static inline void RLMResultsValidateInWriteTransaction(__unsafe_unretained RLMR
 }
 @end
 
+@implementation RLMLockedResults {
+    RLMResults *_results;
+}
+
+- (instancetype)initWithResults:(RLMResults *)results {
+    _results = results;
+    return self;
+}
+
+- (BOOL)isKindOfClass:(Class)aClass {
+    return [_results isKindOfClass:aClass];
+}
+
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)sel {
+    return [_results methodSignatureForSelector:sel];
+}
+
+- (void)forwardInvocation:(NSInvocation *)invocation {
+    @synchronized (_results) {
+        [invocation invokeWithTarget:_results];
+    }
+}
+
+- (id)forwardingTargetForSelector:(__unused SEL)sel {
+    return _results;
+}
+
+- (BOOL)respondsToSelector:(SEL)aSelector {
+    return [_results respondsToSelector:aSelector];
+}
+
+- (void)doesNotRecognizeSelector:(SEL)aSelector {
+    [_results doesNotRecognizeSelector:aSelector];
+}
+@end

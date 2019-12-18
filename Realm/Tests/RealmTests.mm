@@ -1693,6 +1693,61 @@
     }];
 }
 
+#pragma mark - Frozen Realms
+
+- (void)testIsFrozen {
+    RLMRealm *realm = [RLMRealm defaultRealm];
+    XCTAssertFalse(realm.frozen);
+    RLMRealm *frozenRealm = [realm freeze];
+    XCTAssertFalse(realm.frozen);
+    XCTAssertTrue(frozenRealm.frozen);
+}
+
+- (void)testRefreshFrozen {
+    RLMRealm *realm = [RLMRealm defaultRealm];
+    RLMRealm *frozenRealm = realm.freeze;
+    XCTAssertFalse([realm refresh]);
+    XCTAssertFalse([frozenRealm refresh]);
+    [realm transactionWithBlock:^{
+        [IntObject createInRealm:realm withValue:@[@0]];
+    }];
+    XCTAssertFalse([frozenRealm refresh]);
+    XCTAssertEqual(0U, [IntObject allObjectsInRealm:frozenRealm].count);
+}
+
+- (void)testForbiddenMethodsOnFrozenRealm {
+    RLMRealm *realm = [RLMRealm defaultRealm].freeze;
+    RLMAssertThrowsWithReason([realm setAutorefresh:YES],
+                              @"Auto-refresh cannot be enabled for frozen Realms.");
+    RLMAssertThrowsWithReason([realm beginWriteTransaction],
+                              @"Can't perform transactions on a frozen Realm");
+    RLMAssertThrowsWithReason([realm addNotificationBlock:^(RLMNotification, RLMRealm *) { }],
+                              @"Frozen Realms do not change and do not have change notifications.");
+    RLMAssertThrowsWithReason(([[IntObject allObjectsInRealm:realm]
+                                addNotificationBlock:^(RLMResults *, RLMCollectionChange *, NSError *) { }]),
+                              @"Frozen Realms do not change and do not have change notifications.");
+}
+
+- (void)testFrozenRealmCaching {
+    RLMRealm *realm = [RLMRealm defaultRealm];
+    RLMRealm *fr1 = realm.freeze;
+    RLMRealm *fr2 = realm.freeze;
+    XCTAssertEqual(fr1, fr2); // note: pointer equality as it should return the same instance
+
+    [realm transactionWithBlock:^{ }];
+    RLMRealm *fr3 = realm.freeze;
+    RLMRealm *fr4 = realm.freeze;
+    XCTAssertEqual(fr3, fr4);
+    XCTAssertNotEqual(fr1, fr3);
+}
+
+- (void)testReadAfterInvalidateFrozen {
+    RLMRealm *realm = [RLMRealm defaultRealm].freeze;
+    [realm invalidate];
+    RLMAssertThrowsWithReason([IntObject allObjectsInRealm:realm],
+                              @"Cannot read from a frozen Realm which has been invalidated.");
+}
+
 #pragma mark - Assorted tests
 
 #ifndef REALM_SPM

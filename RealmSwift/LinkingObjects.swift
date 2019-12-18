@@ -304,6 +304,11 @@ public struct LinkingObjects<Element: Object> {
         }
     }
 
+    // MARK: Frozen Objects
+
+    public var isFrozen: Bool { return self.rlmResults.isFrozen }
+    public func freeze() -> LinkingObjects { return self } // FIXME
+
     internal var rlmResults: RLMResults<AnyObject> {
         return handle?.results ?? RLMResults<AnyObject>.emptyDetached()
     }

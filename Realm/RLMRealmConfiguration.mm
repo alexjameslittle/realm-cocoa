@@ -258,6 +258,14 @@ static void RLMNSStringToStdString(std::string &out, NSString *in) {
     self.customSchema = [RLMSchema schemaWithObjectClasses:objectClasses];
 }
 
+- (NSUInteger)maximumNumberOfActiveVersions {
+    return static_cast<NSUInteger>(_config.max_number_of_active_versions);
+}
+
+- (void)setMaximumNumberOfActiveVersions:(NSUInteger)maximumNumberOfActiveVersions {
+    _config.max_number_of_active_versions = maximumNumberOfActiveVersions;
+}
+
 - (void)setDynamic:(bool)dynamic {
     _dynamic = dynamic;
     self.cache = !dynamic;
