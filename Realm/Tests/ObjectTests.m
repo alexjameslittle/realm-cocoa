@@ -751,6 +751,8 @@ static void addProperty(Class cls, const char *name, const char *type, size_t si
     XCTAssertNil(obj2.url, @"ignored property should be nil when getting from realm");
 }
 
+#pragma mark - Create
+
 - (void)testCreateInRealmValidationForDictionary {
     RLMRealm *realm = [RLMRealm defaultRealm];
 
@@ -926,6 +928,8 @@ static void addProperty(Class cls, const char *name, const char *type, size_t si
     XCTAssertEqual(2U, DateObjectNoThrow.allObjects.count);
     [realm commitWriteTransaction];
 }
+
+#pragma mark - Description
 
 - (void)testObjectDescription {
     RLMRealm *realm = [RLMRealm defaultRealm];
@@ -1105,6 +1109,8 @@ static void addProperty(Class cls, const char *name, const char *type, size_t si
     XCTAssertEqual(obj1.invalidated, YES);
     XCTAssertNil(obj1.realm, @"Realm should be nil after deletion");
 }
+
+#pragma mark - Primary Keys
 
 - (void)testPrimaryKey {
     [[RLMRealm defaultRealm] beginWriteTransaction];
@@ -1329,6 +1335,77 @@ static void addProperty(Class cls, const char *name, const char *type, size_t si
     BaseClassStringObject *objectFromRealm = [BaseClassStringObject allObjects][0];
     XCTAssertEqual(1, objectFromRealm.intCol);
     XCTAssertEqualObjects(@"stringVal", objectFromRealm.stringCol);
+}
+
+#pragma mark - Frozen Objects
+
+- (void)testFreezeUnmanagedObject {
+    XCTAssertThrows([[[IntObject alloc] init] freeze]);
+}
+
+- (void)testFreezingFrozenObjectReturnsSelf {
+    IntObject *obj = [[IntObject alloc] init];
+    RLMRealm *realm = RLMRealm.defaultRealm;
+    [realm transactionWithBlock:^{
+        [realm addObject:obj];
+    }];
+    IntObject *frozen = obj.freeze;
+    XCTAssertNotEqual(obj, frozen);
+    XCTAssertNotEqual(obj.freeze, frozen);
+    XCTAssertEqual(frozen, frozen.freeze);
+}
+
+- (void)testFreezingDeletedObject {
+    IntObject *obj = [[IntObject alloc] init];
+    RLMRealm *realm = RLMRealm.defaultRealm;
+    [realm transactionWithBlock:^{
+        [realm addObject:obj];
+        [realm deleteObject:obj];
+    }];
+    XCTAssertThrows([obj freeze]);
+}
+
+- (void)testFreezeFromWrongThread {
+    IntObject *obj = [[IntObject alloc] init];
+    RLMRealm *realm = RLMRealm.defaultRealm;
+    [realm transactionWithBlock:^{
+        [realm addObject:obj];
+    }];
+    [self dispatchAsyncAndWait:^{
+        XCTAssertThrows([obj freeze]);
+    }];
+}
+
+- (void)testMutateFrozenObject {
+    IntObject *obj = [[IntObject alloc] init];
+    RLMRealm *realm = RLMRealm.defaultRealm;
+    [realm transactionWithBlock:^{
+        [realm addObject:obj];
+    }];
+    IntObject *frozen = obj.freeze;
+    XCTAssertThrows(frozen.intCol = 1);
+}
+
+- (void)testFrozenObjectEquality {
+    IntObject *liveObj = [[IntObject alloc] init];
+    RLMRealm *realm = RLMRealm.defaultRealm;
+    [realm transactionWithBlock:^{
+        [realm addObject:liveObj];
+    }];
+
+    IntObject *frozen1 = [liveObj freeze];
+    [realm transactionWithBlock:^{
+        [StringObject createInRealm:realm withValue:@[@"a"]];
+    }];
+    IntObject *frozen2 = [liveObj freeze];
+    [realm transactionWithBlock:^{
+        liveObj.intCol = 2;
+    }];
+    IntObject *frozen3 = [liveObj freeze];
+
+    XCTAssertEqualObjects(frozen1, frozen2);
+    XCTAssertNotEqualObjects(frozen1, frozen3);
+    XCTAssertNotEqualObjects(frozen2, frozen3);
 }
 
 @end

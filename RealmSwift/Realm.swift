@@ -739,6 +739,28 @@ public struct Realm {
         return rlmRealm.refresh()
     }
 
+    // MARK: Frozen Realms
+
+    public var isFrozen: Bool {
+        return rlmRealm.isFrozen
+    }
+
+    public func freeze() -> Realm {
+        return isFrozen ? self : Realm(rlmRealm.freeze())
+    }
+
+    public func freeze<T: Object>(_ obj: T) -> T {
+        return RLMObjectFreeze(obj) as! T
+    }
+
+    public func freeze<T: RealmCollectionValue>(_ list: List<T>) -> List<T> {
+        return list.freeze()
+    }
+
+    public func freeze<T: RealmCollectionValue>(_ results: Results<T>) -> Results<T> {
+        return results.freeze()
+    }
+
     // MARK: Invalidation
 
     /**

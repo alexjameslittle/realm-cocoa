@@ -149,6 +149,10 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (nonatomic, readonly) BOOL isEmpty;
 
+@property (nonatomic, readonly, getter=isFrozen) BOOL frozen;
+
+- (RLMRealm *)freeze NS_RETURNS_RETAINED;
+
 #pragma mark - File Management
 
 /**

@@ -463,6 +463,11 @@ public protocol RealmCollection: RealmCollectionBase, _RealmCollectionEnumerator
 
     /// :nodoc:
     func _observe(_ block: @escaping (RealmCollectionChange<AnyRealmCollection<Element>>) -> Void) -> NotificationToken
+
+    // MARK: Frozen Objects
+
+    var isFrozen: Bool { get }
+    func freeze() -> Self
 }
 
 public extension RealmCollection {
@@ -620,6 +625,8 @@ private class _AnyRealmCollectionBase<T: RealmCollectionValue>: AssistedObjectiv
     var bridged: (objectiveCValue: Any, metadata: Any?) { fatalError() }
     // swiftlint:disable:next identifier_name
     func _asNSFastEnumerator() -> Any { fatalError() }
+    var isFrozen: Bool { fatalError() }
+    func freeze() -> _AnyRealmCollectionBase { fatalError() }
 }
 
 private final class _AnyRealmCollection<C: RealmCollection>: _AnyRealmCollectionBase<C.Element> {
@@ -1005,6 +1012,11 @@ public struct AnyRealmCollection<Element: RealmCollectionValue>: RealmCollection
     /// :nodoc:
     public func _observe(_ block: @escaping (RealmCollectionChange<AnyRealmCollection>) -> Void)
         -> NotificationToken { return base._observe(block) }
+
+    // MARK: Frozen Objects
+
+    public var isFrozen: Bool { return base.isFrozen }
+    public func freeze() -> AnyRealmCollection { fatalError() } // FIXME
 }
 
 // MARK: AssistedObjectiveCBridgeable

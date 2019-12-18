@@ -86,6 +86,9 @@ public:
     // Get the info for the target of the given property
     RLMClassInfo &linkTargetType(realm::Property const& property);
 
+    // Get the corresponding ClassInfo for the given Realm
+    RLMClassInfo &freeze(RLMRealm *);
+
     void releaseTable() { m_table = nullptr; }
 
 private:

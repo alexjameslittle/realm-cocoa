@@ -493,6 +493,21 @@ static inline void RLMResultsValidateInWriteTransaction(__unsafe_unretained RLMR
     });
 }
 
+- (instancetype)freeze {
+    if (self.frozen) {
+        return self;
+    }
+
+    RLMRealm *frozenRealm = [_realm freeze];
+    return translateRLMResultsErrors([&] {
+        return [self.class resultsWithObjectInfo:_info->freeze(frozenRealm)
+                                         results:_results.freeze(frozenRealm->_realm)];
+    });
+}
+
+- (BOOL)isFrozen {
+    return _realm.frozen;
+}
 
 // The compiler complains about the method's argument type not matching due to
 // it not having the generic type attached, but it doesn't seem to be possible

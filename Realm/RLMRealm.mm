@@ -544,6 +544,9 @@ REALM_NOINLINE static void translateSharedGroupOpenException(NSError **error) {
     if (_realm->config().immutable()) {
         @throw RLMException(@"Read-only Realms do not change and do not have change notifications");
     }
+    if (_realm->is_frozen()) {
+        @throw RLMException(@"Frozen Realms do not change and do not have change notifications");
+    }
     if (!_realm->can_deliver_notifications()) {
         @throw RLMException(@"Can only add notification blocks from within runloops.");
     }
@@ -695,6 +698,10 @@ REALM_NOINLINE static void translateSharedGroupOpenException(NSError **error) {
             info->didChange(RLMInvalidatedKey);
         }
         objectInfo.second.releaseTable();
+    }
+
+    if (_realm->is_frozen()) {
+        _realm->close();
     }
 }
 
@@ -939,6 +946,24 @@ REALM_NOINLINE static void translateSharedGroupOpenException(NSError **error) {
         }
     }
     return anyDeleted;
+}
+
+- (BOOL)isFrozen {
+    return _realm->is_frozen();
+}
+
+- (RLMRealm *)freeze {
+    return self.isFrozen ? self : RLMGetFrozenRealmForSourceRealm(self);
+}
+
+- (RLMRealm *)frozenCopy {
+    RLMRealm *realm = [[RLMRealm alloc] initPrivate];
+    realm->_realm = _realm->freeze();
+    realm->_realm->read_group();
+    realm->_dynamic = _dynamic;
+    realm->_schema = _schema;
+    realm->_info = RLMSchemaInfo(realm);
+    return realm;
 }
 
 #if REALM_ENABLE_SYNC

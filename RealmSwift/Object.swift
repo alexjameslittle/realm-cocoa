@@ -300,6 +300,10 @@ open class Object: RLMObjectBase, ThreadConfined, RealmCollectionValue {
     public func isSameObject(as object: Object?) -> Bool {
         return RLMObjectBaseAreEqual(self, object)
     }
+
+    // MARK: Frozen Objects
+
+    public var isFrozen: Bool { return realm?.isFrozen ?? false }
 }
 
 /**

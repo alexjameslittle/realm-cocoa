@@ -90,6 +90,7 @@ NS_ASSUME_NONNULL_BEGIN
  Indicates if the array can no longer be accessed.
  */
 @property (nonatomic, readonly, getter = isInvalidated) BOOL invalidated;
+@property (nonatomic, readonly, getter = isFrozen) BOOL frozen;
 
 #pragma mark - Accessing Objects from an Array
 
@@ -423,6 +424,9 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (nullable NSNumber *)averageOfProperty:(NSString *)property;
 
+#pragma mark - Freeze
+
+- (instancetype)freeze;
 
 #pragma mark - Unavailable Methods
 
